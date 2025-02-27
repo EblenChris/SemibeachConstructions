@@ -176,8 +176,8 @@ class SetPartitionGenerator:
             else:
                 for p in make_set_partitions(m - 1):
                     yield [[m]] + p
-                    for i, s in enumerate(p):
-                        yield p[:i] + [s + [m]] + p[i + 1:]
+                    for idx, s in enumerate(p):
+                        yield p[:idx] + [s + [m]] + p[idx + 1:]
 
         set_parts = make_set_partitions(self.n)
         for set_part in set_parts:
@@ -321,4 +321,3 @@ class ArcDiagram:
         """
         return set((arc_1, arc_2) for arc_1 in self.arc_diagram for arc_2 in arc_diagram_2
                    if Arc(arc_1).le < Arc(arc_2).le < Arc(arc_2).re < Arc(arc_1).re)
-
