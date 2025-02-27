@@ -1,5 +1,5 @@
 import itertools
-from ArcDiagrams import *
+from LaTeX import *
 from datetime import datetime
 import pandas as pd
 
@@ -12,7 +12,7 @@ class CentralizerAlgebra:
     coefficients.
 
     Attributes:
-        n (int): The parameter n for UT_n(q).
+        n (int): The size of the unitriangular group.
         k (float): The parameter k for the level of the Bratteli diagram.
         q (int): The parameter q used for UT_n(q).
         dimension (int): The dimension of the centralizer algebra.
@@ -264,6 +264,21 @@ class CentralizerAlgebra:
                         return False
         return True
 
+    def get_sheets_formula(self, file_name: str, coeffs: List[List[int]]) -> None:
+        offset_a = 3 if int(2 * self.k) % 2 == 0 else 4
+        offset_c = 5 if int(2 * self.k) % 2 == 0 else 7
+
+        sheets_formula = '= ' + ' + '.join(
+            '(' + ' + '.join(
+                f'{coeff} * COMBIN(A2 - 1, {offset_a + j})' for j, coeff in enumerate(row)
+            ) + f') * (C2 - 1)^{offset_c + i}'
+            for i, row in enumerate(coeffs)
+        )
+
+        output_file = Path(f"{file_name}.txt")
+        with open(output_file, "w") as file:
+            file.write(sheets_formula)
+
     def get_difference_coeffs(self) -> Tuple[List[List[int]], str, str]:
         """
        Computes the coefficients of binomial terms for a formula describing the difference between
@@ -291,12 +306,12 @@ class CentralizerAlgebra:
                       for n in [self.n] + extra_n]
 
         num_beach_maps, num_beaches = ([0 for _ in range(len([self.n] + extra_n))],
-                                             [0 for _ in range(len([self.n] + extra_n))])
+                                       [0 for _ in range(len([self.n] + extra_n))])
 
         for i, n in enumerate([self.n] + extra_n):
             print(f'Computing n = {n} of {([self.n] + extra_n)[-1]}')
             num_beach_maps[i], num_beaches[i] = (CentralizerAlgebra(n, self.k, self.q)
-                                                       .num_beach_maps_and_beaches(extra_q))
+                                                 .num_beach_maps_and_beaches(extra_q))
 
         # matrix of (q - 1)^i values for the various q
         q_mat = Matrix([[(q - 1) ** i for i in range(5, comb(int(2 * self.k), 2))]
@@ -324,117 +339,9 @@ class CentralizerAlgebra:
             for i in range(comb(int(2 * self.k), 2) - 7):
                 coeffs.append(binomial_mat.LUsolve(Matrix([sols[j][i] for j in range(len([self.n] + extra_n))])))
 
-        # get sheets version of formula with coefficients
-        sheets_formula = f'= '
-        for i in range(len(coeffs)):
-            sheets_formula += f'('
-            for j in range(len(coeffs[i])):
-                if j < len(coeffs[i]) - 1:
-                    if int(2 * self.k) % 2 == 0:
-                        sheets_formula += f'{coeffs[i][j]} * COMBIN(A2 - 1, {3 + j}) + '
-                    else:
-                        sheets_formula += f'{coeffs[i][j]} * COMBIN(A2 - 1, {4 + j}) + '
-                else:
-                    if int(2 * self.k) % 2 == 0:
-                        sheets_formula += f'{coeffs[i][j]} * COMBIN(A2 - 1, {3 + j})'
-                    else:
-                        sheets_formula += f'{coeffs[i][j]} * COMBIN(A2 - 1, {4 + j})'
-            if i < len(coeffs) - 1:
-                if int(2 * self.k) % 2 == 0:
-                    sheets_formula += f') * (C2 - 1)^{5 + i} + '
-                else:
-                    sheets_formula += f') * (C2 - 1)^{7 + i} + '
-            else:
-                if int(2 * self.k) % 2 == 0:
-                    sheets_formula += f') * (C2 - 1)^{5 + i}'
-                else:
-                    sheets_formula += f') * (C2 - 1)^{7 + i}'
-
-        # get LaTeX version of formula with coefficients
-        latex_formula = f'&= '
-        for i in range(len(coeffs)):
-            if sum(1 for x in coeffs[i] if x != 0) > 1:
-                latex_formula += f'\\Bigg('
-                for j in range(len(coeffs[i])):
-                    if j < len(coeffs[i]) - 1:
-                        if int(2 * self.k) % 2 == 0:
-                            if coeffs[i][j] != 0:
-                                if coeffs[i][j + 1] != 0:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{3 + j}}} + ' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{3 + j}}} + '
-                                else:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{3 + j}}}' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{3 + j}}}'
-                        else:
-                            if coeffs[i][j] != 0:
-                                if coeffs[i][j + 1] != 0:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{4 + j}}} + ' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{4 + j}}} + '
-                                else:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{4 + j}}}' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{4 + j}}}'
-                    else:
-                        if int(2 * self.k) % 2 == 0:
-                            if coeffs[i][j] != 0:
-                                latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{3 + j}}}' if coeffs[i][j] != 1 \
-                                    else f'\\binom{{n - 1}}{{{3 + j}}}'
-                        else:
-                            if coeffs[i][j] != 0:
-                                latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{4 + j}}}' if coeffs[i][j] != 1 \
-                                    else f'\\binom{{n - 1}}{{{4 + j}}}'
-                if i < len(coeffs) - 1:
-                    if int(2 * self.k) % 2 == 0:
-                        latex_formula += f'\\Bigg) (q - 1)^{{{5 + i}}} \\\\ \n & \\,\\,\\,\\, + '
-                    else:
-                        latex_formula += f'\\Bigg) (q - 1)^{{{7 + i}}} \\\\ \n & \\,\\,\\,\\, + '
-                else:
-                    if int(2 * self.k) % 2 == 0:
-                        latex_formula += f'\\Bigg) (q - 1)^{{{5 + i}}}'
-                    else:
-                        latex_formula += f'\\Bigg) (q - 1)^{{{7 + i}}}'
-            else:
-                for j in range(len(coeffs[i])):
-                    if j < len(coeffs[i]) - 1:
-                        if int(2 * self.k) % 2 == 0:
-                            if coeffs[i][j] != 0:
-                                if coeffs[i][j + 1] != 0:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{3 + j}}} + ' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{3 + j}}} + '
-                                else:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{3 + j}}}' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{3 + j}}}'
-                        else:
-                            if coeffs[i][j] != 0:
-                                if coeffs[i][j + 1] != 0:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{4 + j}}} + ' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{4 + j}}} + '
-                                else:
-                                    latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{4 + j}}}' \
-                                        if coeffs[i][j] != 1 else f'\\binom{{n - 1}}{{{4 + j}}}'
-                    else:
-                        if int(2 * self.k) % 2 == 0:
-                            if coeffs[i][j] != 0:
-                                latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{3 + j}}}' if coeffs[i][j] != 1 \
-                                    else f'\\binom{{n - 1}}{{{3 + j}}}'
-                        else:
-                            if coeffs[i][j] != 0:
-                                latex_formula += f'{coeffs[i][j]} \\binom{{n - 1}}{{{4 + j}}}' if coeffs[i][j] != 1 \
-                                    else f'\\binom{{n - 1}}{{{4 + j}}}'
-                if i < len(coeffs) - 1:
-                    if int(2 * self.k) % 2 == 0:
-                        latex_formula += f' (q - 1)^{{{5 + i}}} \\\\ \n & \\,\\,\\,\\, + '
-                    else:
-                        latex_formula += f' (q - 1)^{{{7 + i}}} \\\\ \n & \\,\\,\\,\\, + '
-                else:
-                    if int(2 * self.k) % 2 == 0:
-                        latex_formula += f' (q - 1)^{{{5 + i}}}'
-                    else:
-                        latex_formula += f' (q - 1)^{{{7 + i}}}'
-
-        # generate a spreadsheet with the results for q = 2
+        # generate a spreadsheet with the results for q = 2 for reference and verification of the generated coefficients
         results = []
         for i, n in enumerate([self.n] + extra_n):
-            # Append the result for q = 2 as a row in the list
             results.append(
                 [n, self.k, 2, dimensions[i][0], num_beach_maps[i][0], num_beaches[i][0],
                  num_beach_maps[i][0] / dimensions[i][0]])
@@ -446,4 +353,7 @@ class CentralizerAlgebra:
         df.to_csv("centralizer_algebra_results.csv", index=False)
 
         print(f'Finished at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-        return [binom_coeff.tolist() for binom_coeff in coeffs], sheets_formula, latex_formula
+        return ([binom_coeff.tolist() for binom_coeff in coeffs],
+                self.get_sheets_formula('difference_formula_sheets', coeffs),
+                LaTeX(self.n, self.k, self.q).get_latex_formula('difference_coefficients_formula', coeffs),
+                LaTeX(self.n, self.k, self.q).get_latex_table('difference_coefficients_table', coeffs))
