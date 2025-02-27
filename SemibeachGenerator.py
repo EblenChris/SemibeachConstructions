@@ -1,4 +1,5 @@
 from ArcDiagrams import *
+from math import floor
 
 
 class SemibeachGenerator:
@@ -205,17 +206,6 @@ class BeachGenerator:
         """
         return tuple(SetPartitionGenerator(self.n - 1, 2).labeled_set_partitions())
 
-    def random_super_character(self):
-        """
-        Generates a random labeled set partition corresponding to a supercharacter in the kth induction/restriction step.
-
-        Returns:
-            List: A randomly generated set partition.
-        """
-        return random.choice([sp for sp in self.set_partitions_of_n if len(sp) <= floor(self.k)]) \
-            if int(2 * self.k) % 2 == 0 \
-            else random.choice([sp for sp in self.set_partitions_of_n_minus_1 if len(sp) <= floor(self.k)])
-
     def random_beach(self, set_partition: List[Tuple[Tuple[int, int], Any]]) \
             -> Tuple[List[List[List[Tuple[Tuple[int, int], Any]]]], List[Tuple]]:
         """
@@ -231,7 +221,7 @@ class BeachGenerator:
         shifts = []
 
         def append_arcs(beach_in_progress, arcs_with_rows_in_progress, swell):
-            if not arcs_with_rows_in_progress:
+            if swell == int(2 * self.k) and not arcs_with_rows_in_progress:
                 # assign the arcs of the given set partition randomly to the rows in the last swell.
                 unused_rows = [i for i in range(self.row_size - 1)] if int(2 * self.k) % 2 == 0 else [i for i in range(
                     self.row_size)]
@@ -244,7 +234,6 @@ class BeachGenerator:
                         arcs_with_rows_in_progress.append((self.row_size - 1, arc))
                 if self.n not in ArcDiagram(set_partition, self.n, self.q).rights and int(2 * self.k) % 2 == 0:
                     arcs_with_rows_in_progress.append((self.row_size - 1, ((self.n, self.n), 0)))
-
             for i, arc in arcs_with_rows_in_progress:
                 beach_in_progress[i][swell].append(arc)
 
@@ -299,7 +288,6 @@ class BeachGenerator:
 
         # Given the faces in swell j, start moving backward to the seed for swell j
         def resolve_swell(arcs_with_rows, conflict_pair, j):
-
             if not conflict_pair:
                 # place the given arcs in their respective rows in swell j
                 append_arcs(b, arcs_with_rows, j)
@@ -311,7 +299,6 @@ class BeachGenerator:
                     for h in range(j, self.col_size):
                         b[(j - 2) // 2][h].append(seed_face)
                     arcs_with_rows.append(((j - 2) // 2, seed_face))
-
             moved_arc_row, moved_arc = random.choice(moved_arc_choices(b, arcs_with_rows, conflict_pair, j))
 
             if (moved_arc_row, moved_arc) not in arcs_with_rows:
